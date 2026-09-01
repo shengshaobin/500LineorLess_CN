@@ -175,6 +175,11 @@ h1 {
   z-index: 2;
 }
 
+.mom-hit:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
 .mom {
   width: min(46vw, 280px);
   aspect-ratio: 3 / 4;
@@ -224,7 +229,7 @@ h1 {
   padding: 0.45rem 0.9rem 0.4rem;
   border-radius: 1.4rem;
   box-shadow: 0 6px 0 rgba(80, 40, 20, 0.12);
-  z-index: 4;
+  z-index: 5;
 }
 
 .speech::after {
@@ -249,9 +254,10 @@ h1 {
 .spark {
   position: absolute;
   left: 50%;
-  top: 42%;
-  animation: float-up 1.15s ease-out forwards;
-  font-size: 1.4rem;
+  top: 38%;
+  animation: float-up 1.8s ease-out forwards;
+  font-size: 2.1rem;
+  filter: drop-shadow(0 4px 0 rgba(80, 40, 20, 0.12));
 }
 
 .hint {
@@ -286,9 +292,19 @@ h1 {
   box-shadow: 0 2px 0 #1f6f96;
 }
 
+.actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: 0 3px 0 #1f6f96;
+}
+
 .actions .showtime {
   background: linear-gradient(#ff8b96, #e25566);
   box-shadow: 0 5px 0 #b13b48;
+}
+
+.actions .showtime:disabled {
+  box-shadow: 0 3px 0 #b13b48;
 }
 
 .curtain {
@@ -298,6 +314,7 @@ h1 {
   display: grid;
   place-items: center;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .curtain.closed {

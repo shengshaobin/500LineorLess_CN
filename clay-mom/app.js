@@ -14,7 +14,7 @@ const FRAMES = {
 const ACTS = {
   idle: {
     frames: ["idle", "squash", "idle", "jump"],
-    hold: 420,
+    hold: 700,
     loop: true,
     line: "",
   },
@@ -86,15 +86,16 @@ function setPose(name) {
 
 function burst(kind) {
   const glyphs = kind === "hearts" ? ["❤", "💗", "💕"] : ["✦", "✧", "★"];
-  for (let i = 0; i < 8; i += 1) {
+  for (let i = 0; i < 12; i += 1) {
     const node = document.createElement("span");
     node.className = kind === "hearts" ? "heart" : "spark";
     node.textContent = glyphs[i % glyphs.length];
-    node.style.setProperty("--dx", `${(Math.random() - 0.5) * 160}px`);
-    node.style.left = `${42 + Math.random() * 16}%`;
-    node.style.animationDelay = `${i * 0.05}s`;
+    node.style.setProperty("--dx", `${(Math.random() - 0.5) * 220}px`);
+    node.style.left = `${28 + Math.random() * 44}%`;
+    node.style.top = `${28 + Math.random() * 24}%`;
+    node.style.animationDelay = `${i * 0.06}s`;
     fx.appendChild(node);
-    window.setTimeout(() => node.remove(), 1300);
+    window.setTimeout(() => node.remove(), 2000);
   }
 }
 
@@ -172,6 +173,10 @@ function scatterCrumbs() {
   }
 }
 
+document.querySelectorAll("[data-act], #momHit").forEach((el) => {
+  el.disabled = true;
+});
+
 document.querySelectorAll("[data-act]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const act = btn.dataset.act;
@@ -186,6 +191,9 @@ document.getElementById("momHit").addEventListener("click", () => {
 
 document.getElementById("openShow").addEventListener("click", async () => {
   curtain.classList.remove("closed");
+  document.querySelectorAll("[data-act], #momHit").forEach((el) => {
+    el.disabled = false;
+  });
   await wait(400);
   playAct("wave");
 });
