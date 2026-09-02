@@ -3,71 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>儿子做的妈妈 · 粘土动画</title>
+  <title>妈妈 · 一部粘土短片</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%234db3e4'/%3E%3C/svg%3E" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="paper" aria-hidden="true"></div>
-  <div class="crumbs" aria-hidden="true"></div>
-
-  <header class="hero">
-    <p class="eyebrow">粘土定格小剧场</p>
-    <h1>儿子做的妈妈</h1>
-    <p class="subtitle">把手工请上舞台，点一点她就会动起来</p>
-  </header>
-
-  <main class="layout">
-    <aside class="polaroid-wrap">
-      <figure class="polaroid">
-        <img src="assets/original.jpg" alt="儿子亲手捏的蓝色粘土妈妈" />
-        <figcaption>原作 · 儿子捏的妈妈</figcaption>
-      </figure>
-      <p class="note">同一块蓝粘土，换了几个姿势，就变成定格动画。</p>
-    </aside>
-
-    <section class="theater" aria-label="粘土妈妈舞台">
-      <div class="proscenium">
-        <div class="curtain" id="curtain">
-          <div class="curtain-panel left"></div>
-          <div class="curtain-panel right"></div>
-          <button class="open-show" type="button" id="openShow">开幕</button>
-        </div>
-
-        <div class="lights" aria-hidden="true">
-          <span></span><span></span><span></span><span></span><span></span>
-        </div>
-
-        <div class="stage">
-          <div class="speech" id="speech" hidden></div>
-          <div class="fx" id="fx" aria-hidden="true"></div>
-          <button class="mom-hit" type="button" id="momHit" aria-label="点妈妈，让她演一段">
-            <img class="mom" id="mom" src="assets/mom-idle.jpg" alt="蓝色粘土妈妈" />
-          </button>
-          <div class="shadow" id="shadow"></div>
-        </div>
+  <div class="cinema">
+    <div class="letterbox">
+      <video id="film" src="film.mp4" poster="assets/poster.jpg" playsinline></video>
+      <div class="vignette" aria-hidden="true"></div>
+      <div class="end-veil" id="endVeil" hidden>
+        <button type="button" class="replay" id="replay">再看一遍</button>
       </div>
-
-      <p class="hint">点妈妈，或选下面的动作</p>
-
-      <div class="actions" role="group" aria-label="动画动作">
-        <button type="button" data-act="wave">挥挥手</button>
-        <button type="button" data-act="hug">抱抱</button>
-        <button type="button" data-act="dance">跳舞</button>
-        <button type="button" data-act="kiss">飞吻</button>
-        <button type="button" data-act="bounce">蹦蹦跳</button>
-        <button type="button" class="showtime" data-act="show">看演出</button>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <p>给儿子的手工，做成一段会动的小礼物。</p>
-  </footer>
-
+    </div>
+  </div>
+  <button type="button" class="sound-hint" id="soundHint" hidden>轻触开启声音</button>
   <script src="app.js"></script>
 </body>
 </html>
