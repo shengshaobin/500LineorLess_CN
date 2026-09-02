@@ -1,29 +1,68 @@
 #!/usr/bin/env python3
-"""Assemble the clay-mom short film into an MP4."""
+"""Assemble a stop-motion 'Mom's day' short film."""
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).parent
 ASSETS = ROOT / "assets"
+DAY = ASSETS / "day"
 WORK = ROOT / ".film-build"
 OUT = ROOT / "film.mp4"
 FONT = "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
 FPS = 24
-FADE = 0.9
+HOLD = 0.36
 
-SHOTS = [
-    ("film-original.jpg", 6.2, "in", None),
-    ("film-original.jpg", 7.0, "out", "儿子用一块蓝粘土，捏出了妈妈。"),
-    ("film-born.jpg", 7.0, "in", "她有点歪，站得很认真。"),
-    ("film-close.jpg", 7.0, "out", "眼睛、鼻子，还有这张笑。"),
-    ("film-morning.jpg", 7.2, "in", "早上的光，轻轻落在她身上。"),
-    ("film-wave.jpg", 6.8, "out", "看见你了。"),
-    ("film-dance.jpg", 6.8, "in", "儿子说，妈妈会跳舞。"),
-    ("film-bounce.jpg", 6.2, "out", "也会蹦蹦跳跳。"),
-    ("film-hug.jpg", 7.8, "in", "最会的，是抱抱。"),
-    ("film-kiss.jpg", 7.2, "out", "还有一个吻，留给你。"),
-    ("film-night.jpg", 8.2, "in", "夜深了，她还站在那儿。"),
-    ("film-night.jpg", 7.2, "out", None),
+# Each scene is a list of stills played as claymation, then a subtitle.
+SCENES = [
+    {
+        "frames": ["wake1", "wake1", "wake1", "wake1", "wake1", "wake2", "wake2", "wake1", "wake2"],
+        "loops": 2,
+        "sub": "早上，先伸个懒腰。",
+        "title": "妈妈的一天",
+    },
+    {
+        "frames": ["sweep1", "sweep2"],
+        "loops": 10,
+        "sub": "把地扫干净。",
+    },
+    {
+        "frames": ["cook1", "cook2", "cook4", "cook2", "cook3", "cook5", "cook2", "cook4"],
+        "loops": 3,
+        "sub": "早饭得自己做。",
+    },
+    {
+        "frames": ["work1", "work5", "work2", "work5", "work3", "work5", "work2", "work4"],
+        "loops": 3,
+        "sub": "坐下来，把工作做完。",
+    },
+    {
+        "frames": ["laundry1", "laundry2"],
+        "loops": 8,
+        "sub": "衣服也要晾好。",
+    },
+    {
+        "frames": [
+            "lawn1", "lawn2", "lawn4", "lawn2",
+            "lawn1", "lawn4", "lawn2", "lawn1",
+            "lawn4", "lawn2",
+            "lawn3", "lawn7", "lawn3", "lawn7",
+            "lawn5", "lawn6", "lawn7", "lawn3",
+            "lawn5", "lawn6",
+        ],
+        "loops": 2,
+        "sub": "再去草坪上玩一会儿。",
+    },
+    {
+        "frames": ["dinner1", "dinner3", "dinner1", "dinner2", "dinner3", "dinner1"],
+        "loops": 3,
+        "sub": "傍晚，又进了厨房。",
+    },
+    {
+        "frames": ["rest1", "rest1", "rest1", "rest1", "rest1", "rest1"],
+        "loops": 3,
+        "sub": "这一天，可以歇歇了。",
+        "end": True,
+    },
 ]
 
 
@@ -31,43 +70,81 @@ def run(cmd):
     subprocess.run(cmd, check=True)
 
 
-def make_clip(index, src, duration, ken):
-    frames = int(round(duration * FPS))
-    zoom = "min(1+0.00055*on,1.10)" if ken == "in" else "min(1.12-0.00055*on,1.12)"
-    vf = (
-        f"scale=1920:1080,"
-        f"zoompan=z='{zoom}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=1280x720:fps={FPS},"
-        f"fade=t=in:st=0:d={FADE},fade=t=out:st={max(duration - FADE - 0.05, 0.2)}:d={FADE},setsar=1"
+def still(name):
+    path = DAY / f"{name}.jpg"
+    if not path.exists():
+        raise FileNotFoundError(path)
+    return path
+
+
+def probe_duration(path):
+    out = subprocess.check_output(
+        [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=nk=1:nw=1",
+            str(path),
+        ],
+        text=True,
     )
-    if index == 0:
-        vf += (
-            f",drawtext=fontfile={FONT}:text='一部粘土短片':fontsize=22:fontcolor=0xC9B79A:"
-            f"x=(w-text_w)/2:y=(h-text_h)/2-92:shadowcolor=black@0.45:shadowx=2:shadowy=2"
-            f",drawtext=fontfile={FONT}:text='妈妈':fontsize=86:fontcolor=white:"
-            f"x=(w-text_w)/2:y=(h-text_h)/2-18:shadowcolor=black@0.45:shadowx=3:shadowy=3"
-            f",drawtext=fontfile={FONT}:text='儿子捏的':fontsize=24:fontcolor=0xC9B79A:"
-            f"x=(w-text_w)/2:y=(h-text_h)/2+78:shadowcolor=black@0.45:shadowx=2:shadowy=2"
-        )
-    if index == len(SHOTS) - 1:
-        vf += (
-            f",drawtext=fontfile={FONT}:text='终':fontsize=20:fontcolor=0xC9B79A:"
-            f"x=(w-text_w)/2:y=(h-text_h)/2-88:shadowcolor=black@0.45:shadowx=2:shadowy=2"
-            f",drawtext=fontfile={FONT}:text='妈妈':fontsize=78:fontcolor=white:"
-            f"x=(w-text_w)/2:y=(h-text_h)/2-12:shadowcolor=black@0.45:shadowx=3:shadowy=3"
-            f",drawtext=fontfile={FONT}:text='给儿子，也给妈妈':fontsize=24:fontcolor=0xC9B79A:"
-            f"x=(w-text_w)/2:y=(h-text_h)/2+78:shadowcolor=black@0.45:shadowx=2:shadowy=2"
-        )
-    out = WORK / f"shot{index:02d}.mp4"
+    return float(out.strip())
+
+
+def make_scene(index, scene):
+    listing = WORK / f"scene{index:02d}.txt"
+    lines = []
+    sequence = scene["frames"] * scene.get("loops", 1)
+    for name in sequence:
+        lines.append(f"file '{still(name)}'")
+        lines.append(f"duration {HOLD}")
+    lines.append(f"file '{still(sequence[-1])}'")
+    listing.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    duration = HOLD * len(sequence)
+    raw = WORK / f"scene{index:02d}-raw.mp4"
     run([
-        "ffmpeg", "-y", "-loop", "1", "-i", str(ASSETS / src),
-        "-t", str(duration), "-vf", vf,
+        "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
+        "-fps_mode", "cfr", "-r", str(FPS), "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+        str(raw),
+    ])
+
+    vf = (
+        f"scale=1280:720,setsar=1,"
+        f"fade=t=in:st=0:d=0.45,fade=t=out:st={max(duration - 0.5, 0.2)}:d=0.45"
+    )
+    extras = []
+    if scene.get("title"):
+        extras.append(
+            f"drawtext=fontfile={FONT}:text='{scene['title']}':fontsize=52:fontcolor=white:"
+            f"x=(w-text_w)/2:y=h*0.12:shadowcolor=black@0.5:shadowx=3:shadowy=3:"
+            f"enable='between(t,0,2.4)'"
+        )
+    if scene.get("end"):
+        extras.append(
+            f"drawtext=fontfile={FONT}:text='终':fontsize=22:fontcolor=0xC9B79A:"
+            f"x=(w-text_w)/2:y=(h-text_h)/2-70:shadowcolor=black@0.45:shadowx=2:shadowy=2:"
+            f"enable='gte(t,{max(duration - 2.2, 0)})'"
+        )
+        extras.append(
+            f"drawtext=fontfile={FONT}:text='妈妈的一天':fontsize=36:fontcolor=white:"
+            f"x=(w-text_w)/2:y=(h-text_h)/2-10:shadowcolor=black@0.45:shadowx=3:shadowy=3:"
+            f"enable='gte(t,{max(duration - 2.2, 0)})'"
+        )
+    if extras:
+        vf += "," + ",".join(extras)
+
+    out = WORK / f"scene{index:02d}.mp4"
+    run([
+        "ffmpeg", "-y", "-i", str(raw), "-vf", vf,
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "22",
         str(out),
     ])
-    return out
+    duration = probe_duration(out)
+    return out, duration
 
 
-def write_srt():
+def write_srt(durations):
     def stamp(ms):
         h = int(ms // 3600000)
         m = int(ms % 3600000 // 60000)
@@ -78,17 +155,17 @@ def write_srt():
     t = 0.0
     lines = []
     n = 1
-    for _src, duration, _ken, sub in SHOTS:
-        start = t + 1.1
-        end = t + duration - 1.0
+    for scene, duration in zip(SCENES, durations):
+        sub = scene.get("sub")
+        if sub:
+            start = t + 0.45
+            end = t + duration - 0.4
+            lines.append(str(n))
+            lines.append(f"{stamp(start * 1000)} --> {stamp(end * 1000)}")
+            lines.append(sub)
+            lines.append("")
+            n += 1
         t += duration
-        if not sub:
-            continue
-        lines.append(str(n))
-        lines.append(f"{stamp(start * 1000)} --> {stamp(end * 1000)}")
-        lines.append(sub)
-        lines.append("")
-        n += 1
     path = WORK / "film.srt"
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
@@ -99,7 +176,14 @@ def main():
     wav = ASSETS / "lullaby.wav"
     if not wav.exists():
         run(["python3", str(ROOT / "make_lullaby.py")])
-    clips = [make_clip(i, src, duration, ken) for i, (src, duration, ken, _sub) in enumerate(SHOTS)]
+
+    clips = []
+    durations = []
+    for i, scene in enumerate(SCENES):
+        clip, duration = make_scene(i, scene)
+        clips.append(clip)
+        durations.append(duration)
+
     listing = WORK / "concat.txt"
     listing.write_text("".join(f"file '{clip}'\n" for clip in clips), encoding="utf-8")
     silent = WORK / "silent.mp4"
@@ -107,24 +191,31 @@ def main():
         "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
         "-c", "copy", str(silent),
     ])
-    srt = write_srt()
+    srt = write_srt(durations)
     subtitled = WORK / "subtitled.mp4"
     run([
         "ffmpeg", "-y", "-i", str(silent),
-        "-vf", f"subtitles='{srt}':force_style='FontName=Droid Sans Fallback,FontSize=22,PrimaryColour=&H00EAF4F6,OutlineColour=&H80000000,BorderStyle=1,Outline=1,Shadow=0,Alignment=2,MarginV=42'",
+        "-vf", (
+            f"subtitles='{srt}':force_style='FontName=Droid Sans Fallback,FontSize=22,"
+            f"PrimaryColour=&H00EAF4F6,OutlineColour=&H80000000,BorderStyle=1,"
+            f"Outline=1,Shadow=0,Alignment=2,MarginV=42'"
+        ),
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "22",
         str(subtitled),
     ])
+    total = sum(durations)
+    fade_out_at = max(total - 4.0, 1)
     run([
         "ffmpeg", "-y",
         "-i", str(subtitled),
-        "-stream_loop", "-1", "-i", str(ASSETS / "lullaby.wav"),
+        "-stream_loop", "-1", "-i", str(wav),
         "-shortest",
-        "-af", "afade=t=in:st=0:d=1.5,afade=t=out:st=80:d=4",
+        "-af", f"afade=t=in:st=0:d=1.2,afade=t=out:st={fade_out_at}:d=3",
         "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
+        "-aspect", "16:9",
         str(OUT),
     ])
-    print("wrote", OUT)
+    print("wrote", OUT, "seconds", round(total, 1))
 
 
 if __name__ == "__main__":
