@@ -13,16 +13,19 @@ body {
   min-height: 100%;
   display: grid;
   place-items: center;
+  align-content: center;
+  gap: 0.8rem;
   background: radial-gradient(ellipse at center, #1a1410 0%, #0b0908 70%);
 }
 
-.letterbox {
+.phone {
   position: relative;
-  width: min(100vw, calc(100vh * 16 / 9));
-  aspect-ratio: 16 / 9;
+  width: min(100vw, calc(100vh * 9 / 16), 420px);
+  aspect-ratio: 9 / 16;
   overflow: hidden;
   background: #120e0c;
-  box-shadow: 0 0 80px rgba(0, 0, 0, 0.65);
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
 }
 
 video {
@@ -33,24 +36,25 @@ video {
   background: #120e0c;
 }
 
-.vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 52%, rgba(8, 6, 5, 0.32) 100%);
-}
-
 .end-veil {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: end center;
-  padding-bottom: 8%;
-  background: linear-gradient(transparent 55%, rgba(8, 6, 5, 0.45));
+  padding-bottom: 14%;
+  background: linear-gradient(transparent 60%, rgba(8, 6, 5, 0.4));
 }
 
 .end-veil[hidden] {
   display: none;
+}
+
+.hint {
+  margin: 0;
+  color: #8f7358;
+  font-family: "Noto Sans SC", "PingFang SC", sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
 }
 
 .replay,
@@ -76,12 +80,4 @@ video {
 
 .sound-hint[hidden] {
   display: none;
-}
-
-@media (max-width: 700px) {
-  .letterbox {
-    width: 100vw;
-    height: 100vh;
-    aspect-ratio: auto;
-  }
 }
