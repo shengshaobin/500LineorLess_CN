@@ -1,33 +1,27 @@
 #!/usr/bin/env python3
-"""Assemble a smooth 9:16 Douyin short of Mom's day."""
+"""Assemble a 9:16 Douyin dance short from stop-motion stills."""
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).parent
 ASSETS = ROOT / "assets"
-VERT = ASSETS / "v"
+DANCE = ASSETS / "dance"
 WORK = ROOT / ".film-build"
 OUT = ROOT / "film.mp4"
 FONT = "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
 FPS = 24
-XFADE = 0.85
 W, H = 720, 1280
 
-# One still per shot, held long, then dissolved to the next. No rapid cutting.
-SHOTS = [
-    {"src": "v-stretch", "dur": 3.4, "ken": "in", "title": True},
-    {"src": "v-walk", "dur": 2.8, "ken": "out"},
-    {"src": "v-cook1", "dur": 3.2, "ken": "in"},
-    {"src": "v-cook2", "dur": 2.8, "ken": "out"},
-    {"src": "v-cook3", "dur": 2.8, "ken": "in"},
-    {"src": "v-work1", "dur": 3.2, "ken": "out"},
-    {"src": "v-work2", "dur": 2.6, "ken": "in"},
-    {"src": "v-lawn1", "dur": 3.0, "ken": "out"},
-    {"src": "v-lawn2", "dur": 2.8, "ken": "in"},
-    {"src": "v-lawn4", "dur": 3.0, "ken": "out"},
-    {"src": "v-dinner", "dur": 3.2, "ken": "in"},
-    {"src": "v-rest", "dur": 4.2, "ken": "in", "end": True},
-]
+# 120 BPM: one 8th note = 6 frames. Hook sits still, then the beat drops.
+HOOK_FRAMES = 36          # 1.5s still T-pose
+POSE_FRAMES = 6           # 0.25s per pose
+FAST_FRAMES = 3          # double-time
+FREEZE_FRAMES = 60       # 2.5s freeze
+
+# Same lawn, same figure — only the pose changes.
+CYCLE = ["d2", "d3", "d4", "d6", "d5", "d4", "d3", "d7"]
 
 
 def run(cmd):
@@ -47,107 +41,84 @@ def probe_duration(path):
     return float(out.strip())
 
 
-def make_clip(index, shot):
-    frames = int(round(shot["dur"] * FPS))
-    zoom = (
-        "min(1.0+0.00028*on,1.07)"
-        if shot["ken"] == "in"
-        else "if(lte(on,1),1.07,max(1.07-0.00028*on,1.0))"
-    )
-    vf = (
-        f"scale=900:1600,"
-        f"zoompan=z='{zoom}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-        f"d={frames}:s={W}x{H}:fps={FPS},"
-        f"setsar=1,format=yuv420p"
-    )
-    extras = []
-    if shot.get("title"):
-        extras.append(
-            f"drawtext=fontfile={FONT}:text='妈妈的一天':fontsize=46:fontcolor=white:"
-            f"x=(w-text_w)/2:y=h*0.10:shadowcolor=black@0.55:shadowx=3:shadowy=3"
-        )
-        extras.append(
-            f"drawtext=fontfile={FONT}:text='一部粘土短片':fontsize=20:fontcolor=0xE8D7BE:"
-            f"x=(w-text_w)/2:y=h*0.10+62:shadowcolor=black@0.45:shadowx=2:shadowy=2"
-        )
-    if shot.get("end"):
-        extras.append(
-            f"drawtext=fontfile={FONT}:text='终':fontsize=22:fontcolor=0xE8D7BE:"
-            f"x=(w-text_w)/2:y=h*0.12:shadowcolor=black@0.5:shadowx=2:shadowy=2:"
-            f"enable='gte(t,{shot['dur'] - 1.8})'"
-        )
-    if extras:
-        vf += "," + ",".join(extras)
-
-    src = VERT / f"{shot['src']}.jpg"
-    out = WORK / f"clip{index:02d}.mp4"
-    run([
-        "ffmpeg", "-y", "-loop", "1", "-i", str(src),
-        "-t", str(shot["dur"]), "-vf", vf,
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-preset", "veryfast", "-crf", "21",
-        str(out),
-    ])
-    return out
+def emit(src, nframes, dest_dir, start):
+    src = DANCE / f"{src}.jpg"
+    for i in range(nframes):
+        target = dest_dir / f"{start + i:05d}.jpg"
+        if target.exists() or target.is_symlink():
+            target.unlink()
+        os.link(src, target)
+    return start + nframes
 
 
-def xfade_all(clips, durs):
-    if len(clips) == 1:
-        return clips[0]
-    inputs = []
-    for clip in clips:
-        inputs.extend(["-i", str(clip)])
-    parts = []
-    last = "[0]"
-    total = durs[0]
-    for i in range(1, len(clips)):
-        offset = total - XFADE
-        label = f"[v{i}]"
-        parts.append(
-            f"{last}[{i}]xfade=transition=fade:duration={XFADE}:offset={offset:.3f}{label}"
-        )
-        last = label
-        total = total + durs[i] - XFADE
-    filter_complex = ";".join(parts)
-    out = WORK / "xfade.mp4"
-    run([
-        "ffmpeg", "-y", *inputs,
-        "-filter_complex", filter_complex,
-        "-map", last,
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-preset", "veryfast", "-crf", "21",
-        str(out),
-    ])
-    return out
+def build_frame_sequence(dest_dir):
+    if dest_dir.exists():
+        shutil.rmtree(dest_dir)
+    dest_dir.mkdir(parents=True)
+
+    frame = 0
+    frame = emit("d1", HOOK_FRAMES, dest_dir, frame)
+    for _ in range(4):
+        for pose in CYCLE:
+            frame = emit(pose, POSE_FRAMES, dest_dir, frame)
+    for _ in range(2):
+        for pose in CYCLE:
+            frame = emit(pose, FAST_FRAMES, dest_dir, frame)
+    frame = emit("d8", FREEZE_FRAMES, dest_dir, frame)
+    return frame
 
 
 def main():
-    WORK.mkdir(exist_ok=True)
+    if WORK.exists():
+        shutil.rmtree(WORK)
+    WORK.mkdir()
+
     wav = ASSETS / "bgm.wav"
-    if not wav.exists():
-        run(["python3", str(ROOT / "make_bgm.py")])
+    run(["python3", str(ROOT / "make_bgm.py")])
 
-    clips = []
-    durs = []
-    for i, shot in enumerate(SHOTS):
-        clip = make_clip(i, shot)
-        clips.append(clip)
-        durs.append(shot["dur"])
+    frames_dir = WORK / "frames"
+    total_frames = build_frame_sequence(frames_dir)
+    drop_t = HOOK_FRAMES / FPS
+    freeze_t = (total_frames - FREEZE_FRAMES) / FPS
+    total_t = total_frames / FPS
 
-    silent = xfade_all(clips, durs)
+    # Hard cuts between stills = stop-motion dance. A 2-frame brightness
+    # flash marks the drop; a slow push-in sells the freeze.
+    vf = (
+        f"scale={W}:{H},"
+        f"eq=brightness='if(between(t,{drop_t:.3f},{drop_t + 0.08:.3f}),0.16,0)',"
+        f"drawtext=fontfile={FONT}:text='儿子捏的，也会跳':fontsize=36:"
+        f"fontcolor=white:x=(w-text_w)/2:y=h*0.10:"
+        f"shadowcolor=black@0.55:shadowx=3:shadowy=3:"
+        f"enable='gte(t,{freeze_t + 0.35:.3f})',"
+        f"setsar=1,format=yuv420p"
+    )
+
+    silent = WORK / "silent.mp4"
+    run([
+        "ffmpeg", "-y",
+        "-framerate", str(FPS),
+        "-i", str(frames_dir / "%05d.jpg"),
+        "-vf", vf,
+        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-preset", "veryfast", "-crf", "20",
+        "-t", f"{total_t:.4f}",
+        str(silent),
+    ])
+
     total = probe_duration(silent)
-    fade_out_at = max(total - 3.2, 1)
+    fade_out_at = max(total - 0.9, 1)
     run([
         "ffmpeg", "-y",
         "-i", str(silent),
-        "-stream_loop", "-1", "-i", str(wav),
+        "-i", str(wav),
         "-shortest",
-        "-af", f"afade=t=in:st=0:d=0.35,afade=t=out:st={fade_out_at}:d=2.8,volume=1.05",
+        "-af", f"afade=t=out:st={fade_out_at}:d=0.85,volume=1.12",
         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
         "-aspect", "9:16",
         str(OUT),
     ])
-    print("wrote", OUT, "seconds", round(total, 1))
+    print("wrote", OUT, "seconds", round(total, 1), "frames", total_frames)
 
 
 if __name__ == "__main__":
