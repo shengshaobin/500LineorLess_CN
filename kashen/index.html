@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>卡审预检</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%238f2f22'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-size='36' fill='%23fff8f3' font-family='serif'%3E审%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <p id="live" class="sr-only" aria-live="polite"></p>
+  <header class="topbar">
+    <div class="brand">
+      <span class="seal" aria-hidden="true">审</span>
+      <div>
+        <h1>卡审预检</h1>
+        <p>对照历史卡审词，改完再交审</p>
+      </div>
+    </div>
+    <div class="platforms" id="platform-bar" role="group" aria-label="平台"></div>
+    <div class="top-actions">
+      <button class="btn" type="button" data-action="import">导入词库</button>
+      <button class="btn" type="button" data-action="export">导出词库</button>
+      <button class="btn-primary" type="button" data-action="add">新增词条</button>
+    </div>
+  </header>
+  <div class="banner" id="banner">
+    <p>左边是示例词库，中间是示例文案。正式用之前，把你们账号真实被驳回的词和改法导入左边。预检结果只留在这台浏览器里，也不能代替平台终审。</p>
+    <button class="btn" type="button" data-action="dismiss-banner">知道了</button>
+  </div>
+  <main class="workspace">
+    <section class="col col-library" aria-labelledby="col-library-title">
+      <header class="col-h">
+        <div>
+          <span class="kicker">01</span>
+          <h2 id="col-library-title">卡审词与方案</h2>
+          <p class="sub">提前导入的卡审词、改法和以往驳回原因</p>
+        </div>
+        <div class="col-actions">
+          <button class="mini" type="button" data-action="restore-seed">恢复内置</button>
+          <button class="mini" type="button" data-action="clear-rules">清空</button>
+        </div>
+      </header>
+      <div class="col-tools">
+        <input id="search" type="search" placeholder="搜索卡审词、方案、案例" aria-label="搜索词库">
+        <select id="category" aria-label="分类"></select>
+        <label class="check-line"><input id="only-platform" type="checkbox" checked>只看当前平台</label>
+      </div>
+      <div class="col-body rule-list" id="rule-list"></div>
+      <footer class="col-f">
+        <details class="ignores">
+          <summary>忽略词 <span id="ignore-count"></span></summary>
+          <textarea id="ignores" rows="3" aria-label="忽略词" placeholder="最近、最后、完美日记"></textarea>
+          <p>落在这些词里面的卡审词会放过，用来避免「最近」「完美日记」被误伤。</p>
+        </details>
+      </footer>
+    </section>
+
+    <section class="col col-draft" aria-labelledby="col-draft-title">
+      <header class="col-h">
+        <div>
+          <span class="kicker">02</span>
+          <h2 id="col-draft-title">待审文案</h2>
+          <p class="sub">贴上这次要提交的内容</p>
+        </div>
+        <div class="col-actions">
+          <button class="btn" type="button" data-action="sample">示例文案</button>
+          <button class="btn-ghost" type="button" data-action="clear-draft">清空</button>
+        </div>
+      </header>
+      <div class="editor-scroll" id="editor-scroll">
+        <div class="editor-layer">
+          <div class="editor-backdrop" id="backdrop" aria-hidden="true"></div>
+          <div class="editor-placeholder" id="placeholder">把要过审的文案贴在这里。左侧命中的词会标红或标黄，右侧给出改法和理由。</div>
+          <textarea id="draft" class="editor-input" spellcheck="false" aria-label="待审文案"></textarea>
+        </div>
+      </div>
+      <footer class="col-f draft-stat">
+        <span id="draft-stats"></span>
+        <span class="legend"><i class="swatch auto"></i>自动替换 <i class="swatch suggest"></i>待确认</span>
+      </footer>
+    </section>
+
+    <section class="col col-review" aria-labelledby="col-review-title">
+      <header class="col-h">
+        <div>
+          <span class="kicker">03</span>
+          <h2 id="col-review-title">修改意见</h2>
+          <p class="sub" id="review-stats">改动会高亮，理由写在每条下面</p>
+        </div>
+        <div class="col-actions">
+          <button class="btn" type="button" data-action="copy-preview">复制预览</button>
+          <button class="btn" type="button" data-action="copy-report">复制意见</button>
+          <button class="btn-primary" type="button" data-action="apply-auto" id="apply-auto">写回自动项</button>
+        </div>
+      </header>
+      <div class="col-body" id="review-body">
+        <div class="preview-wrap">
+          <div class="preview-head">
+            <strong>修改预览</strong>
+            <span class="legend"><i class="swatch auto"></i>删去 <i class="swatch done"></i>改成 <i class="swatch suggest"></i>待确认</span>
+          </div>
+          <div class="manuscript" id="preview"></div>
+        </div>
+        <p id="empty-review" hidden></p>
+        <ol class="opinions" id="opinions"></ol>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast" hidden></div>
+
+  <dialog class="dialog" id="rule-dialog">
+    <form id="rule-form">
+      <div class="dialog-h"><h3 id="rule-dialog-title">新增词条</h3></div>
+      <div class="dialog-body form-grid">
+        <label for="rule-term">卡审词</label>
+        <div>
+          <input id="rule-term" type="text" required maxlength="200">
+          <p class="hint" id="term-warning" hidden>单个字很容易误伤，例如「最」会命中「最近」。建议写成完整短语。</p>
+        </div>
+        <label for="rule-aliases">别名</label>
+        <input id="rule-aliases" type="text" placeholder="加vx、薇信，用顿号或逗号分隔">
+        <label>处理</label>
+        <div class="radios">
+          <label><input type="radio" name="action" value="auto">自动替换</label>
+          <label><input type="radio" name="action" value="suggest" checked>待确认</label>
+        </div>
+        <label for="rule-replacement">替换为</label>
+        <div>
+          <input id="rule-replacement" type="text">
+          <p class="hint">自动替换留空时，表示从文案里删掉这个词。</p>
+        </div>
+        <label for="rule-solution">解决方案</label>
+        <textarea id="rule-solution" rows="3" required placeholder="为什么会被卡，以及应该怎么改"></textarea>
+        <label>平台</label>
+        <div>
+          <div class="checks" id="platform-checks"></div>
+          <input id="platform-extra" type="text" placeholder="其他平台，用顿号分隔">
+        </div>
+        <label for="rule-category">分类</label>
+        <div>
+          <select id="rule-category"></select>
+          <input id="rule-category-custom" type="text" hidden placeholder="输入分类">
+        </div>
+        <label>程度</label>
+        <div class="radios">
+          <label><input type="radio" name="severity" value="high">高</label>
+          <label><input type="radio" name="severity" value="medium" checked>中</label>
+          <label><input type="radio" name="severity" value="low">低</label>
+        </div>
+        <label for="rule-note">以往案例</label>
+        <textarea id="rule-note" rows="2" placeholder="记下当时的驳回原因、平台和改完怎么过的"></textarea>
+        <label for="rule-skip">排除词</label>
+        <input id="rule-skip" type="text" placeholder="完美日记">
+        <p class="form-error" id="rule-error" hidden></p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn-ghost" type="button" data-action="close-dialog" data-dialog="rule-dialog">取消</button>
+        <button class="btn-primary" type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="dialog" id="import-dialog">
+    <div class="dialog-h"><h3>导入卡审词</h3></div>
+    <div class="dialog-body">
+      <div class="col-actions">
+        <label class="btn">选择文件<input id="import-file" type="file" accept=".csv,.json,.txt,text/csv,application/json" hidden></label>
+        <a class="btn" href="template.csv" download>下载 CSV 模板</a>
+      </div>
+      <textarea id="import-text" rows="8" placeholder="把 CSV、JSON，或「卡审词 => 替换 | 解决方案」贴在这里" aria-label="导入内容"></textarea>
+      <p class="form-error" id="import-error" hidden></p>
+      <div id="import-summary" class="hint"></div>
+      <div id="import-table"></div>
+      <label class="check-line" id="import-ignores-line" hidden><input id="import-ignores" type="checkbox" checked>一并导入文件中的忽略词</label>
+      <details class="help">
+        <summary>格式说明</summary>
+        <p>表头使用：卡审词、替换建议、解决方案、平台、分类、严重程度、处理方式、备注、别名。</p>
+        <p>处理方式写「自动」会直接出现在右侧预览里；写「确认」只标黄。平台用斜杠分隔。</p>
+        <p><code>最好 => 更合适 | 绝对化用语 | 抖音</code></p>
+      </details>
+    </div>
+    <div class="dialog-actions">
+      <button class="btn-ghost" type="button" data-action="close-dialog" data-dialog="import-dialog">取消</button>
+      <button class="btn" type="button" data-action="confirm-import" data-mode="replace">替换整个词库</button>
+      <button class="btn-primary" type="button" data-action="confirm-import" data-mode="append">追加到词库</button>
+    </div>
+  </dialog>
+
+  <script src="engine.js"></script>
+  <script src="seed.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
